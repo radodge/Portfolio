@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP LM317DCYR
+D LM317DCYR, Linear Voltage Regulator, 1.5A Adjustable 1.25  37 V, 4-Pin SOT-223
+K
+F http://www.ti.com/lit/ds/symlink/lm317.pdf
+$ENDCMP
+#
+#End Doc Library

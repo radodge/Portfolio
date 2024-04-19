@@ -1,0 +1,27 @@
+EESchema-LIBRARY Version 2.3
+#encoding utf-8
+#SamacSys ECAD Model LM317DCYR
+#/3309/1211393/2.50/4/3/Integrated Circuit
+DEF LM317DCYR IC 0 30 Y Y 1 F N
+F0 "IC" 1350 300 50 H V L CNN
+F1 "LM317DCYR" 1350 200 50 H V L CNN
+F2 "SOT230P700X180-4N" 1350 100 50 H I L CNN
+F3 "http://www.ti.com/lit/ds/symlink/lm317.pdf" 1350 0 50 H I L CNN
+F4 "LM317DCYR, Linear Voltage Regulator, 1.5A Adjustable 1.25  37 V, 4-Pin SOT-223" 1350 -100 50 H I L CNN "Description"
+F5 "1.8" 1350 -200 50 H I L CNN "Height"
+F6 "Texas Instruments" 1350 -300 50 H I L CNN "Manufacturer_Name"
+F7 "LM317DCYR" 1350 -400 50 H I L CNN "Manufacturer_Part_Number"
+F8 "595-LM317DCYR" 1350 -500 50 H I L CNN "Mouser Part Number"
+F9 "https://www.mouser.co.uk/ProductDetail/Texas-Instruments/LM317DCYR?qs=YhsVCygOPE0H9jB5Yaa05Q%3D%3D" 1350 -600 50 H I L CNN "Mouser Price/Stock"
+F10 "LM317DCYR" 1350 -700 50 H I L CNN "Arrow Part Number"
+F11 "https://www.arrow.com/en/products/lm317dcyr/texas-instruments?region=nac" 1350 -800 50 H I L CNN "Arrow Price/Stock"
+DRAW
+X ADJUST 1 0 0 200 R 50 50 0 0 P
+X OUTPUT_1 2 0 -100 200 R 50 50 0 0 P
+X INPUT 3 0 -200 200 R 50 50 0 0 P
+X OUTPUT_2 4 1500 0 200 L 50 50 0 0 P
+P 5 0 1 6 200 100 1300 100 1300 -300 200 -300 200 100 N
+ENDDRAW
+ENDDEF
+#
+#End Library

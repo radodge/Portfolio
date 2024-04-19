@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP D6C90F2LFS
+D Pushbutton Switches Key Switch N.O. SPDT 100 mA
+K
+F https://www.ckswitches.com/media/1341/d6.pdf
+$ENDCMP
+#
+#End Doc Library

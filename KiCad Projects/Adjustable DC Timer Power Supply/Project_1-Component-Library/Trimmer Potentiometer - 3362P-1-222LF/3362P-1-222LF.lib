@@ -1,0 +1,26 @@
+EESchema-LIBRARY Version 2.3
+#encoding utf-8
+#SamacSys ECAD Model 3362P-1-222LF
+#/559344/1211393/2.50/3/4/Variable Resistor
+DEF 3362P-1-222LF VR 0 30 Y Y 1 F N
+F0 "VR" 950 300 50 H V L CNN
+F1 "3362P-1-222LF" 950 200 50 H V L CNN
+F2 "3362P1222LF" 950 100 50 H I L CNN
+F3 "http://uk.rs-online.com/web/p/products/7870540" 950 0 50 H I L CNN
+F4 "2.2k Through Hole Trimmer Potentiometer 0.5W Top Adjust Bourns 3362 Series" 950 -100 50 H I L CNN "Description"
+F5 "4.7" 950 -200 50 H I L CNN "Height"
+F6 "Bourns" 950 -300 50 H I L CNN "Manufacturer_Name"
+F7 "3362P-1-222LF" 950 -400 50 H I L CNN "Manufacturer_Part_Number"
+F8 "652-3362P-1-222LF" 950 -500 50 H I L CNN "Mouser Part Number"
+F9 "https://www.mouser.co.uk/ProductDetail/Bourns/3362P-1-222LF?qs=XgtFEgsXKydd7ps8uYMWiA%3D%3D" 950 -600 50 H I L CNN "Mouser Price/Stock"
+F10 "3362P-1-222LF" 950 -700 50 H I L CNN "Arrow Part Number"
+F11 "https://www.arrow.com/en/products/3362p-1-222lf/bourns" 950 -800 50 H I L CNN "Arrow Price/Stock"
+DRAW
+X CCW 1 1100 0 200 L 50 50 0 0 P
+X WIPER 2 0 0 200 R 50 50 0 0 P
+X CW 3 1100 -100 200 L 50 50 0 0 P
+P 5 0 1 6 200 100 900 100 900 -200 200 -200 200 100 N
+ENDDRAW
+ENDDEF
+#
+#End Library

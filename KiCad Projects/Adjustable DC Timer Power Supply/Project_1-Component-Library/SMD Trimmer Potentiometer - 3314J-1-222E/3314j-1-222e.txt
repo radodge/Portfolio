@@ -1,0 +1,13 @@
+﻿"Symbol";"Value";"Unit";
+"TraceParts.PartNumber";"90-13062022-057264";"";
+"REFERENCE";"3314J-1-222E";"";
+"TraceParts.PartTitle";"3314J SMD 1 turn cermet trimmer 2K2 4mm";"";
+"TraceParts.InstanceId";"90-13062022-0572642N3XX9WWY2MK673V115V3T3RA";"";
+"DESIGN";"3314J SMD 1 turn cermet trimmer 2K2 4mm";"";
+"TraceParts.PartStatus";"Published";"";
+"TraceParts.PartStatusId";"";"";
+"SUPPLIER";"BOURNS";"";
+"TraceParts.PartVersion";"1.0.0";"";
+"TRACEPARTS";"TRACEPARTS";"";
+"TraceParts.PartLanguage";"en";"";
+"TraceParts.ClassPath";"BOURNS:90-13062022-057264";"";
