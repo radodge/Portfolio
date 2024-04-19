@@ -2,8 +2,7 @@
 #ifndef ADC_H
 #define ADC_H
 
-#include "Our_Functions.h"
-
+#include "core_functions.h"
 
 void adc_init(void);
 int adc_read(void);

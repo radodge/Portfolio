@@ -1,5 +1,5 @@
-#ifndef OUR_FUNCTIONS_H_
-#define OUR_FUNCTIONS_H_
+#ifndef CORE_FUNCTIONS_H_
+#define CORE_FUNCTIONS_H_
 
 
 #include <math.h>
@@ -13,9 +13,8 @@
 #include "servo.h"
 #include "open_interface.h"
 #include "movement.h"
-#include "uart_extra_help.h"
+#include "uart.h"
 #include "adc.h"
-#include "obstacle_avoidance.h"
 #include "ping.h"
 #include "Timer.h"
 #include "button.h"
@@ -52,8 +51,7 @@ typedef struct{                     //struct containing all info from each scan
 }scan_data_t;
 
 
-double toRadians(double degrees);
-void int2char(int input);
+
 int Raw2dist(int IR_val);
 
 float lin_width(object_t *object);
@@ -63,5 +61,6 @@ void ScanVals(object_t *object[10], char startAngle, char endAngle);
 void obj_detection(object_t *objects_list[10], scan_data_t *sensor_data[181], char start_angle, char end_angle);
 float object_clear_check(object_t *objects_list[10]);
 
+double toRadians(double degrees);
 
-#endif /* OUR_FUNCTIONS_H_ */
+#endif /* CORE_FUNCTIONS_H_ */

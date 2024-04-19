@@ -1,9 +1,7 @@
 #ifndef SERVO_H
 #define SERVO_H
 
-
-#include "Our_Functions.h"
-
+#include "core_functions.h"
 
 #define servo_period 320000
 

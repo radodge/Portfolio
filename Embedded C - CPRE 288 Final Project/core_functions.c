@@ -1,4 +1,4 @@
-#include "Our_Functions.h"
+#include "core_functions.h"
 
 
 /** IR VALUES **/
@@ -12,16 +12,6 @@ int Raw2dist(int IR_val)
 /** END IR VALUES **/
 
 
-/** DEGREES TO RADIANS **/
-
-double toRadians(double degrees)
-{
-    return (M_PI / 180.0) * degrees;
-}
-
-/** END DEGREES TO RADIANS **/
-
-
 /** LINEAR WIDTH **/
 
 float lin_width(object_t *object)  //calculates the linear width of an object using the 1/2 * radial width and distance
@@ -32,49 +22,13 @@ float lin_width(object_t *object)  //calculates the linear width of an object us
 /** END LINEAR WIDTH **/
 
 
-/** GAP IDENTIFICATION **/
-
-unsigned char gap_lin_width(object_t *object_list[10])
-{
-    unsigned char prev_obj = 0;
-    unsigned char curr_obj = 0;
-    unsigned max_width_angle = 0; //midpoint angle of the largest gap
-    float distance;               //this is the ping distance of the closer object of the two forming the gap
-    float max_lin_width = -1;     //width of largest gap, arbitrary negative number for more consistent comparisons 
-    float lin_width;              //calulated linear width of gaps
-    char line[70];                //for printout to putty
-
-    sprintf(line, "%8s        %8s<----   %10s   ----->%8s      \r\n", "GAP_NUM", "St-Ang", "lin width", "End-Angle");
-    uart_sendStr(line);
-
-    for(curr_obj = 1; curr_obj < 10; curr_obj++) //previous object is always 0, current object always starts at 1
-    {
-        if(object_list[curr_obj]->dist > 0)      //ignores null objects
-        {
-            distance = (object_list[prev_obj]->dist < object_list[curr_obj]->dist) ? object_list[prev_obj]->dist : object_list[curr_obj]->dist; // gives us the smaller of the object distances
-            lin_width = 2 * (distance + 4.0) * tan(toRadians((object_list[prev_obj]->start_angle - object_list[curr_obj]->end_angle)) / 2.0);   //calculates linear width of gap using the smaller distance
-
-            sprintf(line, "%d        %4d<----   %03.3f   ----->%4d      \r\n", curr_obj, object_list[prev_obj]->start_angle, lin_width - 6.0, object_list[curr_obj]->end_angle);
-            uart_sendStr(line);
-
-            if(max_lin_width < lin_width)  //checks if new gap is wider than previous max
-            {
-                max_lin_width = lin_width; //tracks linear width of largest gap
-                max_width_angle = (object_list[prev_obj]->start_angle - object_list[curr_obj]->end_angle) / 2.0; //midpoint of max width gap
-            }
-
-            prev_obj = curr_obj;
-        }
-    }
-
-    return max_width_angle - 6; //6 cm adjustment for safety, gaps will print 6 cm narrower than calculated
-}
-
-/** END GAP IDENTIFICATION **/
-
-
-/** SCANNING **/
-
+/***
+ *      ___                    _
+ *     / __| __ __ _ _ _  _ _ (_)_ _  __ _
+ *     \__ \/ _/ _` | ' \| ' \| | ' \/ _` |
+ *     |___/\__\__,_|_||_|_||_|_|_||_\__, |
+ *                                   |___/
+ */
 void ScanVals(object_t *object[10], char startAngle, char endAngle)
 {
     scan_data_t *sensor_data[181];                     //array of struct pointers for scan data
@@ -91,7 +45,7 @@ void ScanVals(object_t *object[10], char startAngle, char endAngle)
     int angle = 0;
     int j = 0;
     int total_IR = 0;
-    // char line[50]; //for troubleshooting
+    // char debug_line[50]; //for debugging
 
     servo_rotate(startAngle); //rotates to start angle
     timer_waitMillis(100);    //time for servo to settle into start angle
@@ -111,8 +65,8 @@ void ScanVals(object_t *object[10], char startAngle, char endAngle)
         sensor_data[angle]->structIRdistance = Raw2dist(total_IR / num_scans);
         sensor_data[angle]->structangle = angle;
 
-    //    sprintf(line, "%3d   %4d \r\n", angle, sensor_data[angle]->structIRdistance); //for IR data visibility
-    //    uart_sendStr(line);
+    //    sprintf(debug_line, "%3d   %4d \r\n", angle, sensor_data[angle]->structIRdistance); //for IR data visibility
+    //    uart_sendStr(debug_line);
     }
 
     obj_detection(object, sensor_data, startAngle, endAngle); //processes scanned data into objects
@@ -128,15 +82,19 @@ void ScanVals(object_t *object[10], char startAngle, char endAngle)
 /** END SCANNING **/
 
 
-/** OBJECT DETECTION **/
-
-/* NOTES:
- * The paramater object is a list of 10 pointers
- * The parameter sensor_data is a list of 180 sensor values
+/***
+ *       ___  _     _        _     ___      _          _   _
+ *      / _ \| |__ (_)___ __| |_  |   \ ___| |_ ___ __| |_(_)___ _ _
+ *     | (_) | '_ \| / -_) _|  _| | |) / -_)  _/ -_) _|  _| / _ \ ' \
+ *      \___/|_.__// \___\__|\__| |___/\___|\__\___\__|\__|_\___/_||_|
+ *               |__/
+ *
+ * NOTES:
+ * The paramater "object" is a list of 10 pointers
+ * The parameter "sensor_data" is a list of 180 sensor values
  * Function parses scan data starting at the end angle (closer to 180)
- * Updates global array of objects structs
+ * Updates global array of object structs
  */
-
 void obj_detection(object_t *object[10], scan_data_t *sensor_data[181], char start_angle, char end_angle)
 {
     int i = 0;
@@ -167,7 +125,7 @@ void obj_detection(object_t *object[10], scan_data_t *sensor_data[181], char sta
            radial_width = 0;   //radial width of object
            temp_end_angle = i; //establishes start of alleged object
 
-           while(i >= 0 && (sensor_data[i - 1]->structIRdistance < object_detection_radius))
+           while((i >= 0) && (sensor_data[i - 1]->structIRdistance < object_detection_radius))
            {
                radial_width++; //incriments width as long as values are within radius
                i--;            //continues object index (counts toward zero)
@@ -203,17 +161,14 @@ void obj_detection(object_t *object[10], scan_data_t *sensor_data[181], char sta
 /** END OBJECT DETECTION **/
 
 
-/** OBJECT VALIDATION **/
-
-bool zone_marker_check(object_t *object[10]) //TODO: write function to verify smallest width object
-{
-    return;
-}
-
-/** END OBJECT VALIDATION **/
-
-
-/** CLEAR PATH CHECK 
+/***
+ *       ___ _                ___      _   _       ___ _           _
+ *      / __| |___ __ _ _ _  | _ \__ _| |_| |_    / __| |_  ___ __| |__
+ *     | (__| / -_) _` | '_| |  _/ _` |  _| ' \  | (__| ' \/ -_) _| / /
+ *      \___|_\___\__,_|_|   |_| \__,_|\__|_||_|  \___|_||_\___\__|_\_\
+ *
+ *
+ * CLEAR PATH CHECK 
  * DESCRIPTION:
  * I used the width of the robot (35 cm), a "confidence radius" of 50 cm, and inverse tangent to find the radial width
  * of 2 triangular zones on the left and right of the robot. If any tall objects lie within these "conflict zones"
@@ -223,7 +178,6 @@ bool zone_marker_check(object_t *object[10]) //TODO: write function to verify sm
  * 
  * Calulations rely exclusively on midpoint angle and ping distance, ensuring accuracy.
  **/
-
 float object_clear_check(object_t *object[10]) //returns how far you can travel in a straight line before hitting a tall object
 {
     int i;
@@ -272,23 +226,52 @@ float object_clear_check(object_t *object[10]) //returns how far you can travel 
 /** END CLEAR PATH CHECK **/
 
 
-/** IR CALIBRATION **/
+/** GAP IDENTIFICATION **/
 
-void calibrate_IR(oi_t *sensor){
-   char op[40];
-   int i = 0, sum = 0;
+unsigned char gap_lin_width(object_t *object_list[10])
+{
+    unsigned char prev_obj = 0;
+    unsigned char curr_obj = 0;
+    unsigned max_width_angle = 0; // midpoint angle of the largest gap
+    float distance;               // this is the ping distance of the closer object of the two forming the gap
+    float max_lin_width = -1;     // width of largest gap, arbitrary negative number for more consistent comparisons
+    float lin_width;              // calulated linear width of gaps
+    char line[70];                // for printout to putty
 
-   servo_rotate(90);
-   for(i = 0; i<20; i++){
-       sum += adc_read();
-   }
-   sum /= 20;
+    sprintf(line, "%8s        %8s<----   %10s   ----->%8s      \r\n", "GAP_NUM", "St-Ang", "lin width", "End-Angle");
+    uart_sendStr(line);
 
-   //float ret_val = est_distance(sum);
+    for (curr_obj = 1; curr_obj < 10; curr_obj++) // previous object is always 0, current object always starts at 1
+    {
+        if (object_list[curr_obj]->dist > 0) // ignores null objects
+        {
+            distance = (object_list[prev_obj]->dist < object_list[curr_obj]->dist) ? object_list[prev_obj]->dist : object_list[curr_obj]->dist; // gives us the smaller of the object distances
+            lin_width = 2 * (distance + 4.0) * tan(toRadians((object_list[prev_obj]->start_angle - object_list[curr_obj]->end_angle)) / 2.0);   // calculates linear width of gap using the smaller distance
 
-   lcd_clear();
-   sprintf(op, " %04d \r\n", sum);
-   uart_sendStr(op);
+            sprintf(line, "%d        %4d<----   %03.3f   ----->%4d      \r\n", curr_obj, object_list[prev_obj]->start_angle, lin_width - 6.0, object_list[curr_obj]->end_angle);
+            uart_sendStr(line);
+
+            if (max_lin_width < lin_width) // checks if new gap is wider than previous max
+            {
+                max_lin_width = lin_width;                                                                       // tracks linear width of largest gap
+                max_width_angle = (object_list[prev_obj]->start_angle - object_list[curr_obj]->end_angle) / 2.0; // midpoint of max width gap
+            }
+
+            prev_obj = curr_obj;
+        }
+    }
+
+    return max_width_angle - 6; // 6 cm adjustment for safety, gaps will print 6 cm narrower than calculated
 }
 
-/** END IR CALIBRATION **/
+/** END GAP IDENTIFICATION **/
+
+
+/** DEGREES TO RADIANS **/
+
+double toRadians(double degrees)
+{
+    return (M_PI / 180.0) * degrees;
+}
+
+/** END DEGREES TO RADIANS **/

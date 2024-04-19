@@ -1,14 +1,4 @@
-/*
-*
-*   uart_extra_help.c
-* Description: This is file is meant for those that would like a little
-*              extra help with formatting their code, and followig the Datasheet.
-*/
-
-#include "uart_extra_help.h"
-
-#define REPLACE_ME 0x00
-
+#include "uart.h"
 
 volatile char uart_flag = 0;
 volatile char uart_data = 0;

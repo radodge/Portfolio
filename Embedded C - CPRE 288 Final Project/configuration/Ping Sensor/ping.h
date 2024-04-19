@@ -1,9 +1,7 @@
 #ifndef PING_H
 #define PING_H
 
-
-#include "Our_Functions.h"
-
+#include "core_functions.h"
 
 extern volatile int overflow_count;
 

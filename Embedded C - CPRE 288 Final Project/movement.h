@@ -1,9 +1,7 @@
 #ifndef MOVEMENT_H_
 #define MOVEMENT_H_
 
-
-#include "Our_Functions.h"
-
+#include "core_functions.h"
 
 #define degree_accuracy 0.5 //this is the degree of deviation the driving forward/backward algorithim will correct for
 #define mm_accuracy 1       //this is the mm deviance the turning algorithim will correct for

@@ -9,9 +9,7 @@
 #ifndef UART_H_
 #define UART_H_
 
-
-#include "Our_Functions.h"
-
+#include "core_functions.h"
 
 extern volatile  char uart_data;    // Your UART interupt code can place read data here
 extern volatile  char uart_flag;    // Your UART interupt can update this flag

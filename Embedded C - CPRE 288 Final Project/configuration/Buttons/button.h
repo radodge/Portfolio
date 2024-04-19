@@ -10,9 +10,7 @@
 #ifndef BUTTON_H_
 #define BUTTON_H_
 
-
-#include "Our_Functions.h"
-
+#include "core_functions.h"
 
 extern volatile int button_event;
 extern volatile int button_num;

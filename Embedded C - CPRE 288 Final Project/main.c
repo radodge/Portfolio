@@ -1,8 +1,6 @@
-#include "Our_Functions.h"
-
+#include "core_functions.h"
 
 object_t *object_list[10]; //global variable object_list contains all info about objects after most recent scan
-
 
 int main(void)
 {
@@ -58,17 +56,28 @@ int main(void)
     while(1)
     {
 
-/** PUTTY PRINTOUT **/
+    /** PUTTY PRINTOUT **/
 
         sprintf(line, "\rDist: %-03.3f       ||         Angle: %-03d %10s\r", reece_distance, reece_angle, " ");
         uart_sendStr(line); //constantly prints out relative distance and angle
 
-/** END PUTTY PRINTOUT **/
+    /** END PUTTY PRINTOUT **/
 
 
-/** SCAN CONTROL **/
-
-        if(uart_flag && (uart_data == 'e'))     //all inputs follow the same format
+    /***
+     *      ___          ___                  ___         _           _
+     *     | __|  ___   / __| __ __ _ _ _    / __|___ _ _| |_ _ _ ___| |
+     *     | _|  |___|  \__ \/ _/ _` | ' \  | (__/ _ \ ' \  _| '_/ _ \ |
+     *     |___|        |___/\__\__,_|_||_|  \___\___/_||_\__|_| \___/_|
+     * 
+     * DESCRIPTION:
+     * Scanning restablishes your relative position and outputs all the necessary
+     * information to make decisions. Data about objects and gaps will be printed
+     * to putty.
+     * "reece_distance" is the calculated distance you can travel in a straight
+     * path ahead without hitting a tall object. See "core_functions.c" for exactly how.
+     **/
+        if(uart_flag && (uart_data == 'e'))     //all user inputs are setup like this
         {
             uart_flag = 0;                      //flag needs reset so next input can be tracked
 
@@ -96,18 +105,21 @@ int main(void)
             reece_angle = 90;                                   //re-establish relative angle
         }
 
-/** END SCAN CONTROL
- * DESCRIPTION:
- * Scanning restablishes your relative position and outputs all the necessary
- * information to make decisions. Data about objects and gaps will be printed
- * to putty.
- * "reece_distance" is the calculated distance you can travel in a straight
- * path ahead without hitting a tall object. See "Our_Functions.c" for exactly how.
-**/
+    /** END SCAN CONTROL **/
 
 
-/** MOVE FORWARD **/
-
+    /***
+     *     __      __         __  __               ___                           _ 
+     *     \ \    / /  ___   |  \/  |_____ _____  | __|__ _ ___ __ ____ _ _ _ __| |
+     *      \ \/\/ /  |___|  | |\/| / _ \ V / -_) | _/ _ \ '_\ V  V / _` | '_/ _` |
+     *       \_/\_/          |_|  |_\___/\_/\___| |_|\___/_|  \_/\_/\__,_|_| \__,_|
+     *                                                                             
+     * DESCRIPTION:
+     * Movement is restricted to incriments of reece_distance or reece_distance/2.
+     * The movement functions are deisgned to return distance traveled and
+     * angle deviated. This way, it's theoretically imposible to drive into a
+     * tall object.
+     **/
         else if(uart_flag && (uart_data == 'w') && (reece_angle == 90)) 				//will not allow you to move forward if you turn off axis
         {
             uart_flag = 0;
@@ -120,17 +132,16 @@ int main(void)
             reece_distance = reece_distance - move_forward(sensor, reece_distance);		//move forward full safe path
         }
 
-/** END MOVE FORWARD 
-* DESCRIPTION:
-* Movement is restricted to incriments of reece_distance or reece_distance/2. 
-* The movement functions are deisgned to return distance traveled and
-* angle deviated. This way, it's theoretically imposible to drive into a 
-* tall object. 
-**/
+    /** END MOVE FORWARD **/
 
 
-/** TURN LEFT **/
-
+    /***
+     *        _            _____                _         __ _
+     *       /_\    ___   |_   _|  _ _ _ _ _   | |   ___ / _| |_
+     *      / _ \  |___|    | || || | '_| ' \  | |__/ -_)  _|  _|
+     *     /_/ \_\          |_| \_,_|_| |_||_| |____\___|_|  \__|
+     *
+     */
         else if(uart_flag && (uart_data == 'a')) //half turn
         {
             uart_flag = 0;
@@ -143,11 +154,16 @@ int main(void)
             reece_angle = reece_angle + turn_counter_clockwise(sensor, reece_angle);
         }
 
-/** END TURN LEFT **/
+    /** END TURN LEFT **/
 
 
-/** TURN RIGHT **/
-
+    /***
+     *      ___           _____                ___ _      _   _
+     *     |   \   ___   |_   _|  _ _ _ _ _   | _ (_)__ _| |_| |_
+     *     | |) | |___|    | || || | '_| ' \  |   / / _` | ' \  _|
+     *     |___/           |_| \_,_|_| |_||_| |_|_\_\__, |_||_\__|
+     *                                              |___/
+     */
         else if(uart_flag && (uart_data == 'd')) //half turn
         {
             uart_flag = 0;
@@ -160,22 +176,32 @@ int main(void)
             reece_angle = reece_angle - turn_clockwise(sensor, reece_angle);
         }
 
-/** END TURN RIGHT **/
+    /** END TURN RIGHT **/
 
 
-/** MOVE BACKWARDS **/
-
+    /***
+     *      ___          __  __               ___          _                       _
+     *     / __|  ___   |  \/  |_____ _____  | _ ) __ _ __| |____ __ ____ _ _ _ __| |___
+     *     \__ \ |___|  | |\/| / _ \ V / -_) | _ \/ _` / _| / /\ V  V / _` | '_/ _` (_-<
+     *     |___/        |_|  |_\___/\_/\___| |___/\__,_\__|_\_\ \_/\_/\__,_|_| \__,_/__/
+     *
+     */
         else if(uart_flag && (uart_data == 's')) //limited to 5 cm to minimize risk of hitting objects while reversing
         {
             uart_flag = 0;
             reece_distance = reece_distance - move_backward(sensor, 5);
         }
 
-/** END MOVE BACKWARDS **/
-		
-		
-/** PERPENDICULAR TO TAPE **/
+    /** END MOVE BACKWARDS **/
 
+
+    /***
+     *      ___          ___                           _ _         _            _         _____
+     *     | _ \  ___   | _ \___ _ _ _ __  ___ _ _  __| (_)__ _  _| |__ _ _ _  | |_ ___  |_   _|_ _ _ __  ___
+     *     |  _/ |___|  |  _/ -_) '_| '_ \/ -_) ' \/ _` | / _| || | / _` | '_| |  _/ _ \   | |/ _` | '_ \/ -_)
+     *     |_|          |_| \___|_| | .__/\___|_||_\__,_|_\__|\_,_|_\__,_|_|    \__\___/   |_|\__,_| .__/\___|
+     *                              |_|                                                            |_|
+     */
         else if(uart_flag && (uart_data == 'p')) //optional functionality, use if youd like to get perpendicular to the white tape
         {
             uart_flag = 0;
@@ -186,11 +212,16 @@ int main(void)
             uart_sendStr(line);
         }
 		
-/** END PERPENDICULAR TO TAPE **/
-		
-		
-/** CALIBRATION **/
-		
+    /** END PERPENDICULAR TO TAPE **/
+
+
+    /***
+     *       ___           ___      _ _ _             _   _
+     *      / __|  ___    / __|__ _| (_) |__ _ _ __ _| |_(_)___ _ _
+     *     | (__  |___|  | (__/ _` | | | '_ \ '_/ _` |  _| / _ \ ' \
+     *      \___|         \___\__,_|_|_|_.__/_| \__,_|\__|_\___/_||_|
+     *
+     */
         else if(uart_flag && (uart_data == 'c')) //runs on the bot treadmill, done prior to demo
         {
             uart_flag = 0;
@@ -203,11 +234,16 @@ int main(void)
             servo_calibrate();
         }
 
-/** END CALIBRATION **/
-		
+    /** END CALIBRATION **/
 
-/** EXIT AND OI_FREE **/
 
+    /***
+     *     __  __         ___     _ _
+     *     \ \/ /  ___   | __|_ _(_) |_
+     *      >  <  |___|  | _|\ \ / |  _|
+     *     /_/\_\        |___/_\_\_|\__|
+     *
+     */
         else if(uart_flag && (uart_data == 'X'))
         {
             uart_flag = 0;
@@ -216,7 +252,6 @@ int main(void)
             break;
         }
 		
-/** END EXIT AND OI_FREE **/
-
+    /** END EXIT  **/
     }
 }
