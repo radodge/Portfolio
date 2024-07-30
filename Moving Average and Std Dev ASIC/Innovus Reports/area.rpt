@@ -1,0 +1,9 @@
+    Hinst Name                 Module Name          Inst Count           Total Area
+--------------------------------------------------------------------------------
+final_project_top                                         5080            18106.560
+ RC_CG_DECLONE_HIER_INST       RC_CG_MOD                     1                6.480
+ RC_CG_DECLONE_HIER_INST182997 RC_CG_MOD_2                   1                6.480
+ RC_CG_HIER_INST1              RC_CG_MOD_1                   1                6.480
+ RC_CG_HIER_INST3              RC_CG_MOD_3                   1                6.480
+ RC_CG_HIER_INST4              RC_CG_MOD_4                   1                6.480
+ RC_CG_HIER_INST5              RC_CG_MOD_5                   1                6.480
