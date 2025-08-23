@@ -1,0 +1,145 @@
+#############################
+# Global ignores for Portfolio
+# Covers: OS/editor noise, Python, Jupyter, C/embedded builds, HDL/EDA sims, KiCad,
+# and a few project-specific output folders in this repo.
+#############################
+
+###############
+# OS / Editors
+###############
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS (in case files come from mac)
+.DS_Store
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+
+# Editors/IDEs
+.vscode/
+.idea/
+*.code-workspace
+.history/
+
+##########
+# Python
+##########
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.env/
+
+# Packaging / build
+build/
+dist/
+*.egg-info/
+*.egg
+.python-version
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+.hypothesis/
+
+# Jupyter
+.ipynb_checkpoints/
+
+#########################
+# C/C++ / Embedded builds
+#########################
+*.obj
+*.o
+*.elf
+*.hex
+*.bin
+*.map
+*.out
+*.a
+*.lib
+*.dll
+*.exe
+
+# Common build folders (Eclipse/CCS/Keil/etc.)
+Debug/
+Release/
+.settings/
+*.launch
+
+#########################
+# HDL / EDA tool artifacts
+#########################
+# ModelSim/Questa
+work/
+vsim.wlf
+transcript
+modelsim.ini
+
+# Xilinx Vivado/ISE (generic junk)
+.Xil/
+*.jou
+*.log
+*.str
+*.pb
+xsim.dir/
+*.cache/
+
+# Synopsys/Cadence temporary databases (generic)
+*.synopsys_*
+*.svdb/
+INCA_libs/
+
+#########
+# KiCad
+#########
+# See KiCad docs for recommended ignores. Keep project sources (*.kicad_*), libs, and .pro.
+*.kicad_prl
+*-backups/
+*.kicad_sch-bak
+*.kicad_pcb-bak
+*.tmp
+*.bak
+*.bck
+fp-info-cache
+.kicad*backup*
+
+###########################
+# Project-specific outputs
+###########################
+# Corner Detection / image processing scratch
+/debug_output/
+/ingest/
+Corner Detection Testing/screenshots/
+
+# Photo digitization processed outputs
+/Processed_Photos/
+
+########
+# Misc
+########
+*.tmp
+*.swp
+*.swo
+*.swn
+*.lock
+
+# Archives created during sharing
+*.zip
+*.7z
+*.tar
+*.gz
+
+# End of file

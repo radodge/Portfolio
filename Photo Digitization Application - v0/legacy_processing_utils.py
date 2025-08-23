@@ -1,11 +1,11 @@
+import subprocess
+import os
+import shutil
 import cv2
 from cv2 import cuda
 import numpy as np
 from PIL import Image
 import pillow_heif
-import subprocess
-import os
-import shutil
 from scipy.ndimage import gaussian_filter1d
 from scipy.signal import find_peaks
 import matplotlib.pyplot as plt
@@ -485,7 +485,7 @@ def detect_horizontal_boundaries_cuda(edges, processing_config, debug_data=None)
     max_theta = np.deg2rad(100)
 
     # Ensure edges are on GPU
-    if not isinstance(edges, cv2.cuda.GpuMat):
+    if not isinstance(edges, cuda.GpuMat):
         edges_gpu = cuda.GpuMat()
         edges_gpu.upload(edges)
     else:
@@ -624,7 +624,7 @@ def detect_horizontal_boundaries(edges, processing_config, debug_data=None):
 
     return boundaries
 
-def detect_whitespace_bounds(edges, processing_config, debug_data=None):
+def detect_whitespace_bounds(image_or_edges, processing_config, debug_data=None):
     """
     Detects the left and right content bounds of an image by analyzing edge density.
 
@@ -636,6 +636,24 @@ def detect_whitespace_bounds(edges, processing_config, debug_data=None):
         tuple: (left_bound, right_bound) indices for cropping.
     """
     debug_mode = processing_config.get("Debug_Mode", False)
+    # Ensure we are operating on edges; if a color or grayscale image was provided, compute edges first
+    edges = image_or_edges
+    try:
+        if edges is None:
+            raise ValueError("No image provided for whitespace detection")
+        # If 3-channel or not 2D, convert and edge-detect
+        if len(edges.shape) == 3:
+            gray = cv2.cvtColor(edges, cv2.COLOR_BGR2GRAY)
+            t1, t2 = compute_canny_thresholds(gray, processing_config)
+            edges = cv2.Canny(gray, t1, t2, L2gradient=True)
+        elif edges.dtype != np.uint8 or edges.max() > 1 and edges.max() <= 255 and np.unique(edges).size > 2:
+            # Likely grayscale image, compute edges
+            t1, t2 = compute_canny_thresholds(edges, processing_config)
+            edges = cv2.Canny(edges, t1, t2, L2gradient=True)
+    except Exception:
+        # Fallback: attempt to treat input as already-edged
+        pass
+
     # Step 1: Sum edge intensities along columns
     column_sums = np.sum(edges, axis=0)
 
@@ -652,7 +670,7 @@ def detect_whitespace_bounds(edges, processing_config, debug_data=None):
     # non_whitespace_indices = np.where(smoothed_sums > threshold)[0]
     non_whitespace_indices = np.where(column_sums > threshold)[0]
 
-    if debug_mode:
+    if debug_mode and debug_data is not None:
         # Store the raw data for plotting later
         debug_data.add_plot_data("whitespace_detection_plot", {
             "column_sums": column_sums,
@@ -765,18 +783,18 @@ def split_and_crop(combined_image, processing_config):
     edges = detect_edges(grayscale_image, processing_config)
 
     if edges is None or not np.any(edges):
-        return [], ErrorInfo("EdgeDetectionFailure", "Edge detection failed.")
+        return [], ErrorInfo("EdgeDetectionFailure", "Edge detection failed."), debug_data
     
     # elif cuda_enabled and isinstance(grayscale_image, cuda.GpuMat):
     #     # Download the edge-detected image from GPU
     #     edges = edges.download()
     
     # Store the full edges image if in debug mode
-    if debug_mode:
+    if debug_data is not None:
         debug_data.add_intermediate_output("full_edges", edges)
 
     # Detect horizontal boundaries
-    if processing_config.get("CUDA_Enabled", False):
+    if cuda_enabled:
         horizontal_boundaries = detect_horizontal_boundaries_cuda(edges, processing_config, debug_data)
         edges = edges.download()  # Download the edges for further processing
     else:
@@ -790,7 +808,7 @@ def split_and_crop(combined_image, processing_config):
     #     edges = detect_edges(combined_image, new_config)
     #     horizontal_boundaries = detect_horizontal_boundaries(edges, new_config, debug_data)
 
-    if debug_mode:
+    if debug_data is not None:
         print(f"Detected boundaries: {horizontal_boundaries}")
         debug_data.add_detected_boundaries(horizontal_boundaries)
 
@@ -813,7 +831,7 @@ def split_and_crop(combined_image, processing_config):
             print(f"Subphoto {i} has invalid dimensions: {subphoto.shape}")
             continue
 
-        if debug_mode:
+        if debug_data is not None:
             debug_data.add_raw_subphoto(subphoto.copy())
             debug_data.add_edges_subregion(edges_subregion)
             # cv2.imwrite(os.path.join(debug_path, f"edges_subregion_{i}.png"), edges_subregion)
@@ -890,6 +908,9 @@ def inject_metadata(file_path, exif_date, description):
         # print(f"Metadata injected into {file_path}")
     except subprocess.CalledProcessError as e:
         print(f"Error injecting metadata into {file_path}: {e}")
+    except FileNotFoundError:
+        # exiftool is not installed or not on PATH; continue without metadata
+        print("ExifTool not found on PATH; skipping metadata injection.")
 
 def save_and_inject_metadata(photo, output_base_folder, base_name, part_number, exif_date, description, year, saving_config):
     """

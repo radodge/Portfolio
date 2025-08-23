@@ -1,10 +1,3 @@
-from tkinter import *
-from tkinter import ttk
-from tkinter import filedialog
-from tkinter import font
-from PIL import Image, ImageTk
-import cv2
-import numpy as np
 import platform
 import math
 import threading
@@ -12,6 +5,13 @@ from datetime import datetime
 import shutil
 import os
 import time
+from tkinter import *
+from tkinter import ttk
+from tkinter import filedialog
+from tkinter import font
+from PIL import Image, ImageTk
+import cv2
+import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.backends._backend_tk import NavigationToolbar2Tk
@@ -309,30 +309,15 @@ class ImageEditorGUI:
 
             # Simulate Ingest File (Cascaded Menu)
             simulate_menu = Menu(debug_menu, tearoff=0)
+            self.simulate_menu = simulate_menu  # keep a ref for refresh
             debug_menu.add_cascade(label="Simulate Ingest File", menu=simulate_menu)
 
-            # Option 1: Choose File Manually
-            simulate_menu.add_command(label="Choose File...", command=self.choose_file_dialog)
+            # Populate menu items dynamically from Ingest/Sample Photos
+            self._populate_simulate_menu(simulate_menu)
 
-            # Divider for clarity
-            simulate_menu.add_separator()
-
-            # Option 2: Predefined Test Files
-            test_files = ["TEST_SCAN_0.tif", "TEST_SCAN_1.tif", "TEST_SCAN_2.tif"]
-            for test_file in test_files:
-                simulate_menu.add_command(
-                    label=test_file,
-                    command=lambda file=test_file: self.simulate_ingest_file(file)
-                )
-                
             debug_menu.add_separator()
 
             debug_menu.add_command(label="Display Matlab Plot", command=self.display_debug_plot)
-
-            # Bind hotkeys for simulating ingest files
-            self.root.bind("0", lambda event: self.simulate_ingest_file("TEST_SCAN_0.tif"))
-            self.root.bind("1", lambda event: self.simulate_ingest_file("TEST_SCAN_1.tif"))
-            self.root.bind("2", lambda event: self.simulate_ingest_file("TEST_SCAN_2.tif"))
 
             # geometry_menu = Menu(debug_menu, tearoff=0)
             # debug_menu.add_cascade(label="Change GUI Geometry", menu=geometry_menu)
@@ -380,9 +365,9 @@ class ImageEditorGUI:
         self.root.bind("<Down>", lambda event: self.flip_horizontal())
 
         if self.debug_mode:
-            # Bind additional keys for other functionalities if needed
-            self.root.bind("0", lambda event: self.simulate_ingest_file("TEST_SCAN_0.tif"))
-            self.root.bind("1", lambda event: self.simulate_ingest_file("TEST_SCAN_1.tif"))
+            # After dynamic population, bind 0/1/2 to first few sample files if available
+            sample_files = getattr(self, "_sample_files", [])
+            self._bind_sample_hotkeys(sample_files)
     
     def create_frames(self):
         """Create and organize the main frames of the GUI."""
@@ -1439,64 +1424,151 @@ class ImageEditorGUI:
         """
         Opens a file dialog to manually choose a file from the ingest folder.
         """
-        ingest_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ingest")
-        
+        sample_dir = self._get_sample_photos_dir()
+
         file_path = filedialog.askopenfilename(
-            initialdir=ingest_folder,
+            initialdir=sample_dir,
             title="Select File to Simulate",
             filetypes=(("Image Files", "*.jpg *.png *.tiff *.tif *.jpeg *.bmp *.heic *.webp"), ("All Files", "*.*"))
         )
 
         if file_path:
-            filename = os.path.basename(file_path)
-            self.simulate_ingest_file(filename)
+            self.simulate_ingest_file(file_path)
+
+    def prompt_for_new_config(self, current_config: dict):
+        """
+        Placeholder config editor for legacy demo: simply returns the current config unchanged.
+        """
+        return current_config
 
     def simulate_ingest_file(self, filename=None):
         """
-        Simulates a file appearing in the ingest folder by copying it to a temporary 
-        location one level above, deleting the original, and restoring it with the same filename.
+        Simulates a file appearing in the ingest folder by copying it from
+        Ingest/Sample Photos (or fallback Sample Photos) into Ingest.
+
+        Args:
+            filename (str|None): Either a basename in the sample folder or an absolute path.
         """
-        ingest_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ingest")
-        parent_folder = os.path.dirname(ingest_folder)  # One level above the ingest folder
+        app_dir = os.path.dirname(os.path.abspath(__file__))
+        ingest_folder = os.path.join(app_dir, "Ingest")
+        os.makedirs(ingest_folder, exist_ok=True)
+
+        allowed_exts = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp", ".heic", ".webp"}
 
         try:
-            files = [f for f in os.listdir(ingest_folder) if os.path.isfile(os.path.join(ingest_folder, f))]
+            # Resolve source path
+            if filename and os.path.isabs(filename) and os.path.exists(filename):
+                source_path = filename
+            else:
+                sample_dir = self._get_sample_photos_dir()
+                if not sample_dir:
+                    print("No 'Ingest/Sample Photos' or 'Sample Photos' folder found.")
+                    return
 
-            if not files:
-                print("No files found in the ingest folder to simulate.")
+                # If no filename provided, pick the first available sample
+                samples = self._list_sample_photos(sample_dir, allowed_exts)
+                if not samples:
+                    print("No sample images found to simulate.")
+                    return
+
+                if filename:
+                    # Treat as basename
+                    candidate = os.path.join(sample_dir, filename)
+                    if os.path.exists(candidate):
+                        source_path = candidate
+                    else:
+                        print(f"Sample file '{filename}' not found in {sample_dir}.")
+                        return
+                else:
+                    source_path = os.path.join(sample_dir, samples[0])
+
+            ext = os.path.splitext(source_path)[1].lower()
+            if ext not in allowed_exts:
+                print(f"Unsupported file type: {ext}")
                 return
 
-            # Select the file to simulate
-            if filename:
-                if filename not in files:
-                    print(f"File '{filename}' not found in the ingest folder.")
-                    return
-                file_to_simulate = filename
-            else:
-                file_to_simulate = files[0]  # Default to the first file
+            dest_path = os.path.join(ingest_folder, os.path.basename(source_path))
 
-            original_path = os.path.join(ingest_folder, file_to_simulate)
-            temp_copy_path = os.path.join(parent_folder, file_to_simulate)  # Keep the original filename
+            # If a file with the same name already exists, create a unique name
+            base, ext = os.path.splitext(dest_path)
+            counter = 1
+            unique_dest = dest_path
+            while os.path.exists(unique_dest):
+                unique_dest = f"{base} ({counter}){ext}"
+                counter += 1
 
-            # Step 1: Copy the file to one level above the ingest folder
-            shutil.copy2(original_path, temp_copy_path)
-            print(f"Copied '{file_to_simulate}' to '{parent_folder}' temporarily.")
-
-            # Step 2: Delete the original file in the ingest folder
-            os.remove(original_path)
-            print(f"Deleted the original file: {file_to_simulate}.")
-
-            time.sleep(1)  # Allow time for the monitoring thread to detect deletion
-
-            # Step 3: Move the file back to the ingest folder (triggers on_created event)
-            shutil.move(temp_copy_path, original_path)
-            print(f"Simulated file appearance for '{file_to_simulate}' (original name preserved).")
-
-            # Update the GUI status bar if available
-            self.status_label.config(text=f"Simulated file appearance: {file_to_simulate}")
+            shutil.copy2(source_path, unique_dest)
+            self.status_label.config(text=f"Simulated ingest: {os.path.basename(unique_dest)}")
+            print(f"Simulated ingest of '{source_path}' to '{unique_dest}'.")
 
         except Exception as e:
             print(f"Error simulating file appearance: {e}")
+
+    def _get_sample_photos_dir(self):
+        """Return the preferred sample photos directory, checking Ingest/Sample Photos then Sample Photos."""
+        app_dir = os.path.dirname(os.path.abspath(__file__))
+        candidates = [
+            os.path.join(app_dir, "Ingest", "Sample Photos"),
+            os.path.join(app_dir, "Sample Photos"),
+        ]
+        for path in candidates:
+            if os.path.isdir(path):
+                return path
+        return None
+
+    def _list_sample_photos(self, sample_dir, allowed_exts):
+        """List image files in the given sample_dir filtered by allowed_exts."""
+        try:
+            return sorted(
+                [f for f in os.listdir(sample_dir)
+                 if os.path.isfile(os.path.join(sample_dir, f)) and os.path.splitext(f)[1].lower() in allowed_exts]
+            )
+        except Exception:
+            return []
+
+    def _populate_simulate_menu(self, simulate_menu: Menu):
+        """Populate the simulate ingest submenu with dynamic entries from sample photos."""
+        simulate_menu.delete(0, 'end')
+
+        simulate_menu.add_command(label="Choose File...", command=self.choose_file_dialog)
+        simulate_menu.add_command(label="Refresh List", command=lambda: self._populate_simulate_menu(simulate_menu))
+        simulate_menu.add_separator()
+
+        sample_dir = self._get_sample_photos_dir()
+        allowed_exts = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp", ".heic", ".webp"}
+        files = self._list_sample_photos(sample_dir, allowed_exts) if sample_dir else []
+
+        # Save for hotkey binding
+        self._sample_files = [os.path.join(sample_dir, f) for f in files] if sample_dir else []
+
+        if not files:
+            simulate_menu.add_command(label="No sample photos found", state=DISABLED)
+        else:
+            for f in files:
+                simulate_menu.add_command(
+                    label=f,
+                    command=lambda path=os.path.join(sample_dir, f): self.simulate_ingest_file(path)
+                )
+
+        # Update hotkeys to map 0/1/2 to first three samples if available
+        self._bind_sample_hotkeys(self._sample_files)
+
+    def _bind_sample_hotkeys(self, sample_paths):
+        """Bind keys 0/1/2 to first few sample files, unbinding previous assignments."""
+        # Unbind previous
+        for key in ["0", "1", "2"]:
+            try:
+                self.root.unbind(key)
+            except Exception:
+                pass
+
+        # Rebind if available
+        if len(sample_paths) > 0:
+            self.root.bind("0", lambda event, p=sample_paths[0]: self.simulate_ingest_file(p))
+        if len(sample_paths) > 1:
+            self.root.bind("1", lambda event, p=sample_paths[1]: self.simulate_ingest_file(p))
+        if len(sample_paths) > 2:
+            self.root.bind("2", lambda event, p=sample_paths[2]: self.simulate_ingest_file(p))
 
     def change_font(self):
         """
@@ -1536,7 +1608,7 @@ class ImageEditorGUI:
         font_color_label = ttk.Label(font_window, text="Font Color:")
         font_color_label.grid(row=2, column=0, sticky=W, padx=10, pady=10)
 
-        selected_font_color = self.text_color
+        selected_font_color = StringVar(value=self.text_color)
         font_color_selector = ttk.Combobox(
             font_window,
             textvariable=selected_font_color,
@@ -1551,7 +1623,7 @@ class ImageEditorGUI:
             """
             self.default_font = selected_font_family.get()
             self.base_font_size = font_size.get()
-            self.text_color = font_color_selector.get()
+            self.text_color = selected_font_color.get()
             self.define_styles()  # Reapply styles with the new font settings
             self.root.update_idletasks()  # Refresh the GUI immediately
             font_window.destroy()  # Close the font customization window

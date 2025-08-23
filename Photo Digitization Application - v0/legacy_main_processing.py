@@ -7,7 +7,19 @@ from watchdog.events import FileSystemEventHandler
 from legacy_processing_utils import *
 from legacy_gui_utils import *
 
-class Combined_Photo:
+class CombinedPhoto:
+    """
+    A combined photo object is created for each photo that appears in the ingest folder.
+
+    Args:
+        base_name (str): Unique name for the photo batch.
+        file_path (str): Path to the original combined image file.
+        combined_image (ndarray): The original combined image.
+        subphotos (list): List of processed subphotos (empty if processing failed).
+        config (dict, optional): Configuration settings used for processing.
+        debug_data (DebugData, optional): Debugging information collected during processing.
+        error_message (str, optional): Error message if processing failed.
+    """
     def __init__(
             self,
             base_name,
@@ -18,16 +30,6 @@ class Combined_Photo:
             debug_data=None,
             error_message=None
             ):
-        """
-        Initializes a combined photo object.
-
-        Args:
-            base_name (str): Unique name for the photo batch.
-            file_path (str): Path to the original combined image file.
-            combined_image (ndarray): The original combined image.
-            subphotos (list): List of processed subphotos (empty if processing failed).
-            error_message (str, optional): Error message if processing failed.
-        """
         self.base_name = base_name
         self.file_path = file_path
         self.combined_image = combined_image
@@ -47,7 +49,7 @@ def split_and_enqueue_photos(combined_image_path, processing_config, photo_queue
 
     Args:
         combined_image_path (str): Path to the input combined image.
-        config (dict): Configuration settings for image splitting.
+        processing_config (dict): Configuration settings for image splitting.
         photo_queue (Queue): Queue where processed Combined_Photo objects are added.
     """
     debug_mode = processing_config.get("Debug_Mode", False)
@@ -59,7 +61,12 @@ def split_and_enqueue_photos(combined_image_path, processing_config, photo_queue
         print(f"Error: Failed to load {combined_image_path}. Skipping processing.")
         return  # No further processing needed
     
-    subphotos, error_info, debug_data  = split_and_crop(combined_image, processing_config)
+    result = split_and_crop(combined_image, processing_config)
+    if isinstance(result, tuple) and len(result) == 3:
+        subphotos, error_info, debug_data = result
+    else:
+        subphotos, error_info = result
+        debug_data = None
 
     base_name = os.path.splitext(os.path.basename(combined_image_path))[0]
 
@@ -69,21 +76,38 @@ def split_and_enqueue_photos(combined_image_path, processing_config, photo_queue
         if error_info.error_type == "TooManySubphotos":
             print(f"Processing error for {base_name}: {error_info.message}. Retrying with alternate configuration.")
             alternate_config = get_alternate_processing_config(processing_config, error_info.error_type)
-            subphotos, error_info, debug_data = split_and_crop(combined_image, alternate_config)
+            result = split_and_crop(combined_image, alternate_config)
+            if isinstance(result, tuple) and len(result) == 3:
+                subphotos, error_info, debug_data = result
+            else:
+                subphotos, error_info = result
+                debug_data = None
 
-        print(f"Processing error for {base_name}: {error_info}")
-        # combined_photo_data = Combined_Photo(
-        #     base_name=base_name,
-        #     file_path=combined_image_path,
-        #     combined_image=combined_image,
-        #     subphotos=[],  # No valid subphotos
-        #     config=config,
-        #     debug_data=debug_data if debug_mode else None,
-        #     error_message=error_info.message  # Attach error details
-        # )
+        # If still an error (or any error), enqueue a placeholder CombinedPhoto for GUI review
+        if isinstance(error_info, ErrorInfo):
+            print(f"Processing error for {base_name}: {error_info}")
+            combined_photo_data = CombinedPhoto(
+                base_name=base_name,
+                file_path=combined_image_path,
+                combined_image=combined_image,
+                subphotos=subphotos if subphotos else [],
+                config=processing_config,
+                debug_data=debug_data if debug_mode else None,
+                error_message=error_info.message
+            )
+        else:
+            combined_photo_data = CombinedPhoto(
+                base_name=base_name,
+                file_path=combined_image_path,
+                combined_image=combined_image,
+                subphotos=subphotos,
+                config=processing_config,
+                debug_data=debug_data if debug_mode else None,
+                error_message=None
+            )
     else:
         # Successfully processed image
-        combined_photo_data = Combined_Photo(
+        combined_photo_data = CombinedPhoto(
             base_name=base_name,
             file_path=combined_image_path,
             combined_image=combined_image,
@@ -155,8 +179,10 @@ def monitor_ingest_folder(ingest_folder, photo_queue, processing_config, stop_ev
     class IngestFolderHandler(FileSystemEventHandler):
         """Handles file creation events in the monitored folder."""
         def on_created(self, event):
-            if not event.is_directory and event.src_path.lower().endswith(supported_extensions):
-                process_new_file(event.src_path)
+            if not event.is_directory:
+                ext = os.path.splitext(str(event.src_path))[1].lower()
+                if ext in supported_extensions:
+                    process_new_file(event.src_path)
 
     # Set up folder monitoring
     observer = Observer()
@@ -209,6 +235,8 @@ def handle_combined_photo(gui, combined_photo, processing_config, stop_event):
             return
         new_config = gui.prompt_for_new_config(processing_config)
         gui.confirmation_variable.set("new_config_ready")  # ✅ Signal that the new config is ready
+        # Stash for retrieval after wait_variable
+        setattr(gui, "_pending_new_config", new_config)
         return new_config
 
     gui.root.after(0, update_gui)
@@ -239,14 +267,19 @@ def handle_combined_photo(gui, combined_photo, processing_config, stop_event):
         elif user_choice == "reprocess":
             print(f"🔄 User requested reprocessing for {combined_photo.base_name}.")
 
-            new_config = gui.root.after(0, request_new_config)  # ✅ Run in the main thread
+            gui.root.after(0, request_new_config)  # ✅ Run in the main thread
 
             gui.root.wait_variable(gui.confirmation_variable)  # ✅ Block until "new_config_ready" is set
 
             print("✅ Reprocessing with updated configuration.")
 
             # ✅ Apply new configuration
-            reprocessed_subphotos, _ = split_and_crop(combined_photo.combined_image, new_config)
+            new_config = getattr(gui, "_pending_new_config", processing_config)
+            result = split_and_crop(combined_photo.combined_image, new_config)
+            if isinstance(result, tuple) and len(result) >= 1:
+                reprocessed_subphotos = result[0]
+            else:
+                reprocessed_subphotos = []
             combined_photo.subphotos = reprocessed_subphotos
             combined_photo.num_subphotos = len(reprocessed_subphotos)
             combined_photo.current_index = 0  # Reset index
@@ -324,11 +357,11 @@ def main():
 
     Initializes configuration, GUI, and background threads for folder monitoring and photo processing.
     """
-    Debug_Mode = True
+    DebugMode = True
 
     processing_config = {
-        "Debug_Mode": Debug_Mode,
-        "CUDA_Enabled": False,              # Enable CUDA acceleration (if available)
+        "Debug_Mode": DebugMode,
+        "CUDA_Enabled": True,              # Enable CUDA acceleration (if available)
         "Max_Scanned_Photos": 4,
         "Min_Crop_Margin": 10,              # Crop margin for 0° skew
         "Crop_Margin_Factor": 8,            # Scaling factor to achieve 50 pixels at 5° skew
@@ -342,13 +375,13 @@ def main():
         "Canny_Thresholds": (50, 150),
         "Content_Threshold_Ratio": 0.01,
         "Horizontal_Boundary_Threshold": 0.6,
-        "Hough_Threshhold": 150,
+        "Hough_Threshold": 150,
         "Skew_Angle_Threshold": 10,
         "Skew_ROI_Margin": 0.05
     }
 
     saving_config = {
-        "Debug_Mode": Debug_Mode,
+        "Debug_Mode": DebugMode,
         "Save_As_HEIC": True,  # Save in HEIC format
         "HEIC_Quality": 100,
         "Save_As_JPEG": True,  # Save in JPEG format
@@ -358,7 +391,7 @@ def main():
     }
 
     gui_config = {
-        "Debug_Mode": Debug_Mode,
+        "Debug_Mode": DebugMode,
         "Background_Color_1": "#0F0F0F",       # Set the background color of the window
         "Background_Color_2": "#181818",
         "Default_Window_Size": "1400x900+100+100",      # Set the initial window size and position it at 100,100
@@ -366,14 +399,14 @@ def main():
     }
 
     application_root = os.path.dirname(os.path.abspath(__file__))
-    output_base_folder = os.path.abspath(os.path.join(application_root, "..", "Processed_Photos"))
-    ingest_folder = os.path.join(application_root, "ingest")
+    output_base_folder = os.path.abspath(os.path.join(application_root, "Processed Photos"))
+    ingest_folder = os.path.join(application_root, "Ingest")
 
     os.makedirs(output_base_folder, exist_ok=True)
     os.makedirs(ingest_folder, exist_ok=True)
 
-    if Debug_Mode:
-        debug_output_folder = os.path.join(application_root, "debug_output")
+    if DebugMode:
+        debug_output_folder = os.path.join(application_root, "Debug Output")
         os.makedirs(debug_output_folder, exist_ok=True)
         processing_config["Debug_Output_Path"] = debug_output_folder
 
