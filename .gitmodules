@@ -1,0 +1,4 @@
+[submodule "Photo Digitization Application - v0"]
+	path = Photo Digitization Application - v0
+	url = https://github.com/radodge/photo-digitization-v0.git
+	branch = main
