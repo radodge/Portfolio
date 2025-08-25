@@ -110,7 +110,7 @@ def convert_to_grayscale(image, processing_config):
         # Convert to grayscale using CUDA
         gpu_image = cuda.GpuMat()
         gpu_image.upload(image)
-        gpu_grayscale = cv2.cuda.cvtColor(gpu_image, cv2.COLOR_BGR2GRAY)
+        gpu_grayscale = cuda.cvtColor(gpu_image, cv2.COLOR_BGR2GRAY)
         return gpu_grayscale
     
     else:

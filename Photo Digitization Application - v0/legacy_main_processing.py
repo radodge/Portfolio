@@ -1,4 +1,5 @@
 import os
+import time
 import queue
 from queue import Queue
 import threading
@@ -174,6 +175,8 @@ def monitor_ingest_folder(ingest_folder, photo_queue, processing_config, stop_ev
 
     def process_new_file(image_path):
         print(f"New file detected: {image_path}")
+        # Small settling delay to avoid reading while the file is still being written
+        time.sleep(0.5)
         split_and_enqueue_photos(image_path, processing_config, photo_queue)
 
     class IngestFolderHandler(FileSystemEventHandler):
