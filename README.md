@@ -16,7 +16,7 @@ Welcome to my collection of hardware and software projects developed through cou
 - [KiCad Projects](KiCad%20Projects/README.md) – Schematics and board layouts such as an adjustable power supply and a reprogrammable Game Boy Advance cartridge.
 
 ### Computer Vision Image Processing & Automation
-- [Photo Digitization Application - v0](Photo%20Digitization%20Application%20-%20v0/README.md) – Legacy implementation of my photo 'digitization' Python application.
+- [Photo Digitization Application - v0](https://github.com/radodge/photo-digitization-v0) – Legacy implementation of my photo 'digitization' Python application.
 
 
 
